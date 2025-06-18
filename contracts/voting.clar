@@ -29,11 +29,7 @@
 )
 
 ;; Allowed choices (hardcoded)
-(define-constant voptions (list "OptionA" "OptionB" "OptionC" "OptionD"))
-
-(define-read-only (get-voptions (choice (string-ascii 20)))
-  (get count (map-get? vote-counts {choice: choice}))
-)
+(define-data-var allowed-choices (list (string-ascii 20)) (list "OptionA" "OptionB" "OptionC" "OptionD"))
 
 ;; Define who voted for what
 (define-map votes {voter: principal} {choice: (string-ascii 20)})
@@ -41,16 +37,25 @@
 ;; Define vote counts per choice
 (define-map vote-counts {choice: (string-ascii 20)} {count: uint})
 
-;; Helper to check if a choice is in the allowed list
-(define-private (is-allowed? (choice (string-ascii 20)))
-  (is-some (fold
-    allowed-choices
-    (some false)
-    (lambda (item acc)
-      (if (or (is-eq item choice) (unwrap-panic acc)) (some true) acc)
-    )
-  ))
+
+;; Return the allowed voting options
+(define-read-only (get-allowed-choices)
+  allowed-choices
 )
+
+;; Return allowed choices with their current vote counts
+(define-read-only (get-allowed-choices-with-counts)
+  (map
+    (lambda (option)
+      {
+        choice: option,
+        count: (default-to u0 (get count (map-get? vote-counts {choice: option})))
+      }
+    )
+    allowed-choices
+  )
+)
+
 
 (define-public (vote (choice (string-ascii 20)))
   (if (not (is-allowed? choice))
